@@ -32,6 +32,10 @@ class QRCodeDisplay extends StatefulWidget {
 class _QRCodeDisplayState extends State<QRCodeDisplay> {
   String qrData = '';
   Timer? timer;
+  Timer? roundTimer;
+  int currentLength = 1;  // Start with length of 1
+  static const int maxLength = 256;  // Maximum length
+  static const roundDuration = Duration(seconds: 10);  // Round duration
 
   @override
   void initState() {
@@ -39,8 +43,19 @@ class _QRCodeDisplayState extends State<QRCodeDisplay> {
     // Update QR code every 1/30 second (30 FPS)
     timer = Timer.periodic(const Duration(milliseconds: 33), (timer) {
       setState(() {
-        // Generate random string of 16 characters
-        qrData = randomAlphaNumeric(16);
+        qrData = randomAlphaNumeric(currentLength);
+      });
+    });
+
+    // Round timer to double the length every 10 seconds
+    roundTimer = Timer.periodic(roundDuration, (timer) {
+      setState(() {
+        if (currentLength < maxLength) {
+          currentLength *= 2;  // Double the length
+        } else {
+          // Reset to 1 when we reach max length
+          currentLength = 1;
+        }
       });
     });
   }
@@ -48,6 +63,7 @@ class _QRCodeDisplayState extends State<QRCodeDisplay> {
   @override
   void dispose() {
     timer?.cancel();
+    roundTimer?.cancel();
     super.dispose();
   }
 
@@ -67,7 +83,11 @@ class _QRCodeDisplayState extends State<QRCodeDisplay> {
               size: 300.0,
             ),
             const SizedBox(height: 20),
-            Text('Current Data: $qrData',
+            Text(
+              'Current Data: ${qrData.length > 4 ? '${qrData.substring(0, 4)}...' : qrData}',
+              style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text('Current Length: $currentLength',
                 style: const TextStyle(fontSize: 16)),
           ],
         ),
