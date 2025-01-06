@@ -86,6 +86,7 @@ class _QRCodeDisplayState extends State<QRCodeDisplay> {
   
   final TextEditingController textController = TextEditingController();
   bool isRandomMode = true;  // Track if we're in random generation mode
+  bool isPaused = false;  // Track if the round is paused
 
   // -1 to -4 represents M1 to M4, 1 represents QR V1, 2 represents QR V2, 3-40 represents regular QR versions
   int currentVersion = -1;  // Start with Micro QR M1
@@ -111,6 +112,21 @@ class _QRCodeDisplayState extends State<QRCodeDisplay> {
     {'name': 'Q - Quartile (25%)', 'value': QrErrorCorrectLevel.Q},
     {'name': 'H - High (30%)', 'value': QrErrorCorrectLevel.H},
   ];
+
+  void pauseRound() {
+    setState(() {
+      isPaused = true;
+      timer?.cancel();
+      roundTimer?.cancel();
+    });
+  }
+
+  void resumeRound() {
+    setState(() {
+      isPaused = false;
+      initializeTimers();
+    });
+  }
 
   void resetToVersion(int version) {
     setState(() {
@@ -242,6 +258,10 @@ class _QRCodeDisplayState extends State<QRCodeDisplay> {
       setState(() {
         isRandomMode = false;  // Switch to manual mode
         qrData = text;
+        // Stop the round when encoding text
+        timer?.cancel();
+        roundTimer?.cancel();
+        isPaused = true;
       });
     } else {
       // Show error message if text is too long
@@ -258,6 +278,9 @@ class _QRCodeDisplayState extends State<QRCodeDisplay> {
     setState(() {
       isRandomMode = true;
       textController.clear();  // Clear the text input
+      if (!isPaused) {
+        initializeTimers();
+      }
     });
   }
 
@@ -355,6 +378,16 @@ class _QRCodeDisplayState extends State<QRCodeDisplay> {
             const SizedBox(height: 10),
             Text('QR Version: ${getCurrentVersionName()}',
                 style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: isPaused ? resumeRound : pauseRound,
+                  child: Text(isPaused ? 'Resume' : 'Pause'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
